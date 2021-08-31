@@ -35,6 +35,8 @@ def _impl(ctx):
         toolchain_identifier = "clang-darwin"
     elif (ctx.attr.cpu == "k8"):
         toolchain_identifier = "clang-linux"
+    elif (ctx.attr.cpu == "x64_windows"):
+        toolchain_identifier = "clang-windows"
     else:
         fail("Unreachable")
 
@@ -42,6 +44,8 @@ def _impl(ctx):
         host_system_name = "x86_64"
     elif (ctx.attr.cpu == "darwin"):
         host_system_name = "x86_64-apple-macosx"
+    elif (ctx.attr.cpu == "x64_windows"):
+        host_system_name = "x86_64"
     else:
         fail("Unreachable")
 
@@ -49,6 +53,8 @@ def _impl(ctx):
         target_system_name = "x86_64-apple-macosx"
     elif (ctx.attr.cpu == "k8"):
         target_system_name = "x86_64-unknown-linux-gnu"
+    elif (ctx.attr.cpu == "x64_windows"):
+        target_system_name = "x86_64-windows"
     else:
         fail("Unreachable")
 
@@ -56,6 +62,8 @@ def _impl(ctx):
         target_cpu = "darwin"
     elif (ctx.attr.cpu == "k8"):
         target_cpu = "k8"
+    elif (ctx.attr.cpu == "x64_windows"):
+        target_cpu = "x64_windows"
     else:
         fail("Unreachable")
 
@@ -63,16 +71,14 @@ def _impl(ctx):
         target_libc = "glibc_unknown"
     elif (ctx.attr.cpu == "darwin"):
         target_libc = "macosx"
+    elif (ctx.attr.cpu == "x64_windows"):
+        target_libc = "msvc"
     else:
         fail("Unreachable")
 
-    if (ctx.attr.cpu == "darwin" or
-        ctx.attr.cpu == "k8"):
-        compiler = "clang"
-    else:
-        fail("Unreachable")
+    compiler = "clang"
 
-    if (ctx.attr.cpu == "k8"):
+    if (ctx.attr.cpu == "k8" or ctx.attr.cpu == "x64_windows"):
         abi_version = "clang"
     elif (ctx.attr.cpu == "darwin"):
         abi_version = "darwin_x86_64"
@@ -83,16 +89,14 @@ def _impl(ctx):
         abi_libc_version = "darwin_x86_64"
     elif (ctx.attr.cpu == "k8"):
         abi_libc_version = "glibc_unknown"
+    elif (ctx.attr.cpu == "x64_windows"):
+        abi_libc_version = "unknown"
     else:
         fail("Unreachable")
 
     cc_target_os = None
 
-    if (ctx.attr.cpu == "darwin" or
-        ctx.attr.cpu == "k8"):
-        builtin_sysroot = "%{sysroot_path}"
-    else:
-        fail("Unreachable")
+    builtin_sysroot = "%{sysroot_path}"
 
     all_compile_actions = [
         ACTION_NAMES.c_compile,
@@ -145,6 +149,40 @@ def _impl(ctx):
     action_configs = []
 
     if ctx.attr.cpu == "k8":
+        compiler_flags = []
+    elif ctx.attr.cpu == "darwin":
+        compiler_flags = []
+    elif ctx.attr.cpu == "x64_windows":
+        compiler_flags = [
+            "-target x86_64-pc-win32",
+            "-fms-compatibility-version=19",
+            "-fms-extensions",
+            "-fdelayed-template-parsing",
+            "-fexceptions",
+            "-mthread-model posix",
+            "-fno-threadsafe-statics",
+            "-Wno-msvc-not-found",
+            "-DWIN32",
+            "-D_WIN32",
+            "-D_MT",
+            "-D_DLL",
+            "-Xclang -disable-llvm-verifier",
+            "-Xclang '--dependent-lib=msvcrt'",
+            "-Xclang '--dependent-lib=ucrt'",
+            "-Xclang '--dependent-lib=oldnames'",
+            "-Xclang '--dependent-lib=vcruntime'",
+            "-D_CRT_SECURE_NO_WARNINGS",
+            "-D_CRT_NONSTDC_NO_DEPRECATE",
+            "-U__GNUC__",
+            "-U__gnu_linux__",
+            "-U__GNUC_MINOR__",
+            "-U__GNUC_PATCHLEVEL__",
+            "-U__GNUC_STDC_INLINE__",
+        ]
+    else:
+        fail("Unreachable")
+
+    if ctx.attr.cpu == "k8":
         linker_flags = [
             # Use the lld linker.
             "-fuse-ld=lld",
@@ -171,6 +209,19 @@ def _impl(ctx):
             "-headerpad_max_install_names",
             "-undefined",
             "dynamic_lookup",
+        ]
+    elif ctx.attr.cpu == "x64_windows":
+        linker_flags = [
+            "-fuse-ld=lld",
+            "-target x86_64-pc-win32",
+            "-Wl,-machine:x64",
+            "-fmsc-version=1900",
+            "-L/mnt/c/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.29.30037/lib/x64/uwp",
+            "-L/mnt/c/Program Files (x86)/Windows Kits/10/Lib/10.0.19041.0/um/x64",
+            "-L/mnt/c/Program Files (x86)/Windows Kits/10/Lib/10.0.19041.0/ucrt/x64",
+            "-nostdlib",
+            "-lmsvcrt",
+            "-Wno-msvc-not-found",
         ]
     else:
         fail("Unreachable")
@@ -200,7 +251,7 @@ def _impl(ctx):
                             "-D__TIMESTAMP__=\"redacted\"",
                             "-D__TIME__=\"redacted\"",
                             "-fdebug-prefix-map=%{toolchain_path_prefix}=%{debug_toolchain_path_prefix}",
-                        ],
+                        ] + compiler_flags,
                     ),
                 ],
             ),
@@ -519,6 +570,13 @@ def _impl(ctx):
         ] + [
             %{darwin_additional_cxx_builtin_include_directories}
         ]
+    elif (ctx.attr.cpu == "x64_windows"):
+        cxx_builtin_include_directories += [
+            "/mnt/c/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.29.30037/include",
+            "/mnt/c/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/ucrt",
+            "/mnt/c/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/shared",
+            "/mnt/c/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/winrt",
+        ]
     else:
         fail("Unreachable")
 
@@ -533,10 +591,19 @@ def _impl(ctx):
         ]
     elif (ctx.attr.cpu == "k8"):
         make_variables = []
+    elif (ctx.attr.cpu == "x64_windows"):
+        make_variables = []
+        artifact_name_patterns += [
+            artifact_name_pattern(
+                  category_name = "executable",
+                  prefix = "",
+                  extension = ".exe",
+              ),
+        ]
     else:
         fail("Unreachable")
 
-    if (ctx.attr.cpu == "k8"):
+    if (ctx.attr.cpu == "k8" or ctx.attr.cpu == "x64_windows"):
         tool_paths = [
             tool_path(
                 name = "ld",
@@ -647,6 +714,7 @@ cc_toolchain_config = rule(
             values = [
                 "darwin",
                 "k8",
+                "x64_windows",
             ],
         ),
     },

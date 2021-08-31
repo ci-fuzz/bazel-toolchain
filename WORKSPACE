@@ -16,23 +16,6 @@ workspace(
     name = "com_grail_bazel_toolchain",
 )
 
-load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
-
-bazel_toolchain_dependencies()
-
-load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
-
-llvm_toolchain(
-    name = "llvm_toolchain",
-    # LLVM 9.0.0 needs /usr/lib/libtinfo.so.5 that is not very straightforward
-    # to set up in all linux distros we test.
-    llvm_version = "8.0.0",
-)
-
-load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
-
-llvm_register_toolchains()
-
 ## Toolchain example with a sysroot.
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
@@ -49,6 +32,39 @@ filegroup(
     sha256 = "84656a6df544ecef62169cfe3ab6e41bb4346a62d3ba2a045dc5a0a2ecea94a3",
     urls = ["https://commondatastorage.googleapis.com/chrome-linux-sysroot/toolchain/2202c161310ffde63729f29d27fe7bb24a0bc540/debian_stretch_amd64_sysroot.tar.xz"],
 )
+
+LLVM_VERSION = "12.0.0"
+
+load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
+
+bazel_toolchain_dependencies()
+
+load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
+
+llvm_toolchain(
+    name = "llvm_toolchain",
+    llvm_version = LLVM_VERSION,
+    sha256 = {
+        "darwin": "d3f9247d73cd077308c1c3afd4956fb58cf19f7ec823d3de89dcbeb5468279fb",
+        "linux": "855377b52e65b6a2975e03efccf8616043398506d455775ee39387e854e38952",
+    },
+    strip_prefix = {
+        "darwin": "clang+llvm-%s-x86_64-apple-darwin" % LLVM_VERSION,
+        "linux": "llvm-project-%s" % LLVM_VERSION,
+    },
+    sysroot = {
+        # Keep in sync with the _sysroot attribute in clang_tidy_test and ci-protoc.
+        "linux": "@org_chromium_sysroot_linux_x64//:sysroot",
+    },
+    urls = {
+        "darwin": ["https://github.com/CodeIntelligenceTesting/llvm-project/releases/download/rel/clang+afl_driver+llvm-%s-x86_64-apple-darwin.tar.xz" % LLVM_VERSION],
+        "linux": ["https://s3.eu-central-1.amazonaws.com/public.code-intelligence.com/llvm/llvm-project-%s.tar.xz" % LLVM_VERSION],
+    },
+)
+
+load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
+
+llvm_register_toolchains()
 
 llvm_toolchain(
     name = "llvm_toolchain_linux_sysroot",
@@ -105,3 +121,12 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains()
+
+http_archive(
+    name = "platforms",
+    sha256 = "079945598e4b6cc075846f7fd6a9d0857c33a7afc0de868c2ccb96405225135d",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/platforms/releases/download/0.0.4/platforms-0.0.4.tar.gz",
+        "https://github.com/bazelbuild/platforms/releases/download/0.0.4/platforms-0.0.4.tar.gz",
+    ],
+)

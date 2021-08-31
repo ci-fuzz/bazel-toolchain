@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 
 cc_library(
     name = "stdlib",
@@ -23,6 +23,13 @@ cc_library(
 cc_test(
     name = "stdlib_test",
     srcs = ["stdlib_test.cc"],
+    deps = [":stdlib"],
+)
+
+cc_binary(
+    name = "stdlib_exec",
+    srcs = ["stdlib_test.cc"],
+    target_compatible_with = ["@platforms//os:windows"],
     deps = [":stdlib"],
 )
 
