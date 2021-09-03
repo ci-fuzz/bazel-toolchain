@@ -154,23 +154,23 @@ def _impl(ctx):
         compiler_flags = []
     elif ctx.attr.cpu == "x64_windows":
         compiler_flags = [
-            "-target x86_64-pc-win32",
+            "--target=x86_64-pc-win32",
             "-fms-compatibility-version=19",
             "-fms-extensions",
             "-fdelayed-template-parsing",
             "-fexceptions",
-            "-mthread-model posix",
+            "-mthread-model", "posix",
             "-fno-threadsafe-statics",
             "-Wno-msvc-not-found",
             "-DWIN32",
             "-D_WIN32",
             "-D_MT",
             "-D_DLL",
-            "-Xclang -disable-llvm-verifier",
-            "-Xclang '--dependent-lib=msvcrt'",
-            "-Xclang '--dependent-lib=ucrt'",
-            "-Xclang '--dependent-lib=oldnames'",
-            "-Xclang '--dependent-lib=vcruntime'",
+            "-Xclang", "-disable-llvm-verifier",
+            "-Xclang", "--dependent-lib=msvcrt",
+            "-Xclang", "--dependent-lib=ucrt",
+            "-Xclang", "--dependent-lib=oldnames",
+            "-Xclang", "--dependent-lib=vcruntime",
             "-D_CRT_SECURE_NO_WARNINGS",
             "-D_CRT_NONSTDC_NO_DEPRECATE",
             "-U__GNUC__",
@@ -178,12 +178,15 @@ def _impl(ctx):
             "-U__GNUC_MINOR__",
             "-U__GNUC_PATCHLEVEL__",
             "-U__GNUC_STDC_INLINE__",
+            "-Iwindows_sysroot/include/msvc",
+            "-Iwindows_sysroot/include/ucrt",
         ]
     else:
         fail("Unreachable")
 
     if ctx.attr.cpu == "k8":
         linker_flags = [
+            "-lm",
             # Use the lld linker.
             "-fuse-ld=lld",
             # The linker has no way of knowing if there are C++ objects; so we always link C++ libraries.
@@ -203,6 +206,7 @@ def _impl(ctx):
         ]
     elif ctx.attr.cpu == "darwin":
         linker_flags = [
+            "-lm",
             # Difficult to guess options to statically link C++ libraries with the macOS linker.
             "-lc++",
             "-lc++abi",
@@ -213,12 +217,13 @@ def _impl(ctx):
     elif ctx.attr.cpu == "x64_windows":
         linker_flags = [
             "-fuse-ld=lld",
-            "-target x86_64-pc-win32",
+            "--target=x86_64-pc-win32",
             "-Wl,-machine:x64",
             "-fmsc-version=1900",
-            "-L/mnt/c/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.29.30037/lib/x64/uwp",
-            "-L/mnt/c/Program Files (x86)/Windows Kits/10/Lib/10.0.19041.0/um/x64",
-            "-L/mnt/c/Program Files (x86)/Windows Kits/10/Lib/10.0.19041.0/ucrt/x64",
+            # "-Lwindows_sysroot/lib/ucrt",
+            # "-Lwindows_sysroot/lib/um",
+            # "-Lwindows_sysroot/lib/uwp",
+            "-Lwindows_sysroot/lib",
             "-nostdlib",
             "-lmsvcrt",
             "-Wno-msvc-not-found",
@@ -231,7 +236,7 @@ def _impl(ctx):
     dbg_feature = feature(name = "dbg")
 
     random_seed_feature = feature(name = "random_seed", enabled = True)
-    supports_pic_feature = feature(name = "supports_pic", enabled = True)
+    supports_pic_feature = feature(name = "supports_pic", enabled = ctx.attr.cpu != "x64_windows")
     supports_dynamic_linker_feature = feature(name = "supports_dynamic_linker", enabled = True)
 
     unfiltered_compile_flags_feature = feature(
@@ -267,7 +272,6 @@ def _impl(ctx):
                 flag_groups = [
                     flag_group(
                         flags = [
-                            "-lm",
                             "-no-canonical-prefixes",
                         ] + linker_flags,
                     ),
@@ -327,7 +331,7 @@ def _impl(ctx):
             ),
             flag_set(
                 actions = all_cpp_compile_actions,
-                flag_groups = [flag_group(flags = ["-std=c++17", "-stdlib=libc++"])],
+                flag_groups = [flag_group(flags = ["-std=c++17"])],
             ),
         ],
     )
@@ -572,10 +576,10 @@ def _impl(ctx):
         ]
     elif (ctx.attr.cpu == "x64_windows"):
         cxx_builtin_include_directories += [
-            "/mnt/c/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.29.30037/include",
-            "/mnt/c/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/ucrt",
-            "/mnt/c/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/shared",
-            "/mnt/c/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/winrt",
+            "%{sysroot_path}/include/msvc",
+            "%{sysroot_path}/include/shared",
+            "%{sysroot_path}/include/ucrt",
+            "%{sysroot_path}/include/winrt",
         ]
     else:
         fail("Unreachable")

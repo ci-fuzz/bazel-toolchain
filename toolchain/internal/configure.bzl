@@ -37,14 +37,6 @@ def _include_dirs_str(rctx, cpu):
     return ("\n" + 12 * " ").join(["\"%s\"," % d for d in dirs])
 
 def llvm_toolchain_impl(rctx):
-    if rctx.os.name.startswith("windows"):
-        rctx.file("BUILD")
-        rctx.file("toolchains.bzl", """
-def llvm_register_toolchains():
-    pass
-        """)
-        return
-
     repo_path = str(rctx.path(""))
     relative_path_prefix = "external/%s/" % rctx.name
     if rctx.attr.absolute_paths:
@@ -109,11 +101,11 @@ def llvm_register_toolchains():
     if not _download_llvm(rctx):
         _download_llvm_preconfigured(rctx)
 
-def conditional_cc_toolchain(name, darwin, absolute_paths = False):
+def conditional_cc_toolchain(name, os, absolute_paths = False):
     # Toolchain macro for BUILD file to use conditional logic.
 
-    toolchain_config = "local_darwin" if darwin else "local_linux"
-    toolchain_identifier = "clang-darwin" if darwin else "clang-linux"
+    toolchain_config = "local_" + os
+    toolchain_identifier = "clang-" + os
 
     if absolute_paths:
         _cc_toolchain(
@@ -124,11 +116,11 @@ def conditional_cc_toolchain(name, darwin, absolute_paths = False):
             linker_files = ":empty",
             objcopy_files = ":empty",
             strip_files = ":empty",
-            supports_param_files = 0 if darwin else 1,
+            supports_param_files = 0 if os == "darwin" else 1,
             toolchain_config = toolchain_config,
         )
     else:
-        extra_files = [":cc_wrapper"] if darwin else []
+        extra_files = [":cc_wrapper"] if os == "darwin" else []
         native.filegroup(name = name + "-all-files", srcs = [":all_components"] + extra_files)
         native.filegroup(name = name + "-archiver-files", srcs = [":ar"] + extra_files)
         native.filegroup(name = name + "-assembler-files", srcs = [":as"] + extra_files)
@@ -144,6 +136,6 @@ def conditional_cc_toolchain(name, darwin, absolute_paths = False):
             linker_files = name + "-linker-files",
             objcopy_files = ":objcopy",
             strip_files = ":empty",
-            supports_param_files = 0 if darwin else 1,
+            supports_param_files = 0 if os == "darwin" else 1,
             toolchain_config = toolchain_config,
         )

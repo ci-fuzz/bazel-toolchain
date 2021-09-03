@@ -54,7 +54,9 @@ llvm_toolchain(
     },
     sysroot = {
         # Keep in sync with the _sysroot attribute in clang_tidy_test and ci-protoc.
-        "linux": "@org_chromium_sysroot_linux_x64//:sysroot",
+        #"linux": "@org_chromium_sysroot_linux_x64//:sysroot",
+        "linux": "//windows_sysroot:sysroot",
+        "windows": "//windows_sysroot:sysroot",
     },
     urls = {
         "darwin": ["https://github.com/CodeIntelligenceTesting/llvm-project/releases/download/rel/clang+afl_driver+llvm-%s-x86_64-apple-darwin.tar.xz" % LLVM_VERSION],
@@ -65,14 +67,6 @@ llvm_toolchain(
 load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
 
 llvm_register_toolchains()
-
-llvm_toolchain(
-    name = "llvm_toolchain_linux_sysroot",
-    llvm_version = "9.0.0",
-    sysroot = {
-        "linux": "@org_chromium_sysroot_linux_x64//:sysroot",
-    },
-)
 
 # Well known repos; present here only for testing.
 

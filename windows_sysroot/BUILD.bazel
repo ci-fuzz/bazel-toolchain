@@ -1,0 +1,8 @@
+filegroup(
+    name = "sysroot",
+    srcs = glob([
+        "include/**",
+        "lib/**",
+    ]),
+    visibility = ["//visibility:public"],
+)
