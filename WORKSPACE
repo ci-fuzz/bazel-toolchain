@@ -54,8 +54,7 @@ llvm_toolchain(
     },
     sysroot = {
         # Keep in sync with the _sysroot attribute in clang_tidy_test and ci-protoc.
-        #"linux": "@org_chromium_sysroot_linux_x64//:sysroot",
-        "linux": "//windows_sysroot:sysroot",
+        "linux": "@org_chromium_sysroot_linux_x64//:sysroot",
         "windows": "//windows_sysroot:sysroot",
     },
     urls = {

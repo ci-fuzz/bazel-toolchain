@@ -149,9 +149,9 @@ def _impl(ctx):
     action_configs = []
 
     if ctx.attr.cpu == "k8":
-        compiler_flags = []
+        compiler_flags = ["-stdlib=libc++"]
     elif ctx.attr.cpu == "darwin":
-        compiler_flags = []
+        compiler_flags = ["-stdlib=libc++"]
     elif ctx.attr.cpu == "x64_windows":
         compiler_flags = [
             "--target=x86_64-pc-win32",

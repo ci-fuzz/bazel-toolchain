@@ -29,7 +29,6 @@ cc_test(
 cc_binary(
     name = "stdlib_exec",
     srcs = ["stdlib_test.cc"],
-    target_compatible_with = ["@platforms//os:windows"],
     deps = [":stdlib"],
 )
 

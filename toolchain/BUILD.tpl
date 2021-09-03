@@ -33,7 +33,7 @@ filegroup(
 
 filegroup(
     name = "sysroot_components",
-    srcs = [%{sysroot_label}],
+    srcs = [%{sysroot_label}, "@//windows_sysroot:sysroot"],
 )
 
 cc_toolchain_suite(
